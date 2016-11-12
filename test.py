@@ -3,6 +3,8 @@ import numpy as np
 import math
 import win32api, win32con
 from mouse_commands import *
+SCROLL_INVERSE_GAIN = 5
+
 
 def threshold(img):
     grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
@@ -118,8 +120,8 @@ while(cap.isOpened()):
         # cv2.rectangle(crop_img,(x,y),(x+w,y+h),(0,0,255),0)
 
 
-
-
+        win32api.SetCursorPos((x, y))
+        mouse.x, mouse.y = win32api.GetCursorPos()
 
 
         # hull = cv2.convexHull(cnt)
@@ -132,6 +134,7 @@ while(cap.isOpened()):
         cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 10)
         cv2.circle(drawing, tuple(palmCenter),
                        10, (255, 0, 0), -2)
+        # hull = cv2.convexHull(cnt)
 
 
         # draw hand contour
