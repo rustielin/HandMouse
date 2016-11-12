@@ -1,5 +1,6 @@
 import win32api
 from win32api import GetSystemMetrics
+DIST_THRESH = 20
 
 class Mouse:
     SCROLL_INVERSE_GAIN = 5
@@ -21,6 +22,8 @@ class Mouse:
         if self.clicked:
             return
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, self.x, self.y, 0, 0)
+        self.init_x = self.x
+        self.init_y = self.y
         self.clicked = True
 
     def left_unpress(self):
@@ -34,12 +37,16 @@ class Mouse:
             return
         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, self.x, self.y, 0, 0)
         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, self.x, self.y, 0, 0)
+        self.clicked = True
 
     def right_press(self):
         if self.clicked:
             return
         x, y = win32api.GetCursorPos()
         win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, self.x, self.y, 0, 0)
+        self.init_x = self.x
+        self.init_y = self.y
+        self.clicked = True
 
     def right_unpress(self):
         if not self.clicked:
@@ -52,8 +59,14 @@ class Mouse:
         height = GetSystemMetrics(1)
         x = width -  x * width//200
         y = y * width//200
-        win32api.SetCursorPos((x, y))
-        self.x, self.y = x, y
+        center = (self.init_x, self.init_y)
+        point = (x, y)
+        if not clicked or distance(point, center) > DIST_THRESH:
+            win32api.SetCursorPos((x, y))
+            self.x, self.y = x, y
+        else:
+            win32api.SetCursorPos((self.init_x, self.init_y))
+            self.x, self.y = self.init_x, self.init_y
 
     def scroll(self): # positive direction = up or right
         if not mouse.scrolling:
@@ -72,3 +85,6 @@ class Mouse:
         self.left_unpress()
         self.right_unpress()
         self.__init__()
+
+def distance(point1, point2):
+    return sqrt(((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2))
