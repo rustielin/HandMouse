@@ -3,11 +3,32 @@ import numpy as np
 import math
 import win32api, win32con
 from mouse_commands import *
-SCROLL_INVERSE_GAIN = 5
-STATES = {
 
+
+"""ENG_STATES = {
+    0: "fist"
+    1: "single finger"
+    3: "three fingers"
+    5: "open hand"
+}"""
+
+mouse = Mouse()
+
+STATES_W_CLICK = { #mouse action will be instant, click cannot be held
+    0: mouse.scroll,
+    1: mouse.left_click,
+    3: mouse.right_click,
+    5: mouse.reset
 }
 
+STATES_W_DRAG = { #click will be held until reset
+    0: mouse.scroll,
+    1: mouse.left_press,
+    3: mouse.right_press,
+    5: mouse.reset
+}
+
+STATES = STATES_W_CLICK #can be changed to if/else for user input
 
 def threshold(img):
     grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
@@ -123,8 +144,7 @@ while(cap.isOpened()):
         # cv2.rectangle(crop_img,(x,y),(x+w,y+h),(0,0,255),0)
 
 
-        win32api.SetCursorPos((x, y))
-        mouse.x, mouse.y = win32api.GetCursorPos()
+        mouse.set_pos()
 
 
         # hull = cv2.convexHull(cnt)
@@ -187,6 +207,7 @@ while(cap.isOpened()):
         # else:
         #     cv2.putText(img,"PROJECT: Hand Mouse", (50,50),\
         #                 cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        do_gesture(num) #"""PUT IN SOME NUMBER OF FINGERS"""
         cv2.imshow('drawing', drawing)
         #cv2.imshow('end', crop_img)
 
@@ -199,3 +220,6 @@ while(cap.isOpened()):
             break
     except:
         pass
+
+def do_gesture(num):
+    STATES[num]()
