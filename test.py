@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 import win32api, win32con
-import mouse_commands
+from mouse_commands import *
 
 cap = cv2.VideoCapture(0)
 while(cap.isOpened()):
@@ -54,18 +54,17 @@ while(cap.isOpened()):
         #cv2.circle(crop_img,far,5,[0,0,255],-1)
     if count_defects == 6:
         cv2.putText(img,"5 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        reset()
+        mouse.reset()
     elif count_defects == 2: #assumes fist
         cv2.putText(img,"1 finger", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        if not hasattr(mouse, "init_x") or not init_x:
+        if not hasattr(mouse, "init_x") or not mouse.init_x:
             mouse.init_x, mouse.init_y = mouse.get_pos()
-        mouse.scroll()
-    if mouse.clicked:
-        continue
+        #mouse.scroll()
     elif count_defects == 3:
         cv2.putText(img, "2 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     elif count_defects == 4:
-        mouse.left_click()
+        #mouse.left_click()
+        pass
         #cv2.putText(img,"3 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     elif count_defects == 5:
         cv2.putText(img,"4 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)

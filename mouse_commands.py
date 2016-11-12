@@ -1,7 +1,7 @@
 import win32api, win32con
 
 
-def Mouse:
+class Mouse:
     def __init__(self):
         self.clicked = False
 
@@ -54,11 +54,11 @@ def Mouse:
         win32api.SetCursorPos((x, y))
 
     def scroll(self): #positive direction = up or right
-    x, y = win32api.GetCursorPos()
-    v_direction, h_direction = x - self.init_x, y - self.init_y
-    win32api.mouse_event(MOUSEEVENTF_WHEEL, x, y, v_direction, 0)
-    win32api.mouse_event(MOUSEEVENTF_WHEEL, x, y, h_direction, 0)
-    self.clicked = True
+        x, y = win32api.GetCursorPos()
+        v_direction, h_direction = x - self.init_x, y - self.init_y
+        win32api.mouse_event(MOUSEEVENTF_WHEEL, x, y, v_direction, 0)
+        win32api.mouse_event(MOUSEEVENTF_WHEEL, x, y, h_direction, 0)
+        self.clicked = True
 
     def reset(self):
         self.left_unpress()
