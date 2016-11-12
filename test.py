@@ -165,7 +165,7 @@ def rps():
             if k == 27:
                 break
             n+=1
-        return lst
+            return lst
         except Exception as e:
             print(e)
             pass
