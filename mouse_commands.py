@@ -1,3 +1,5 @@
+import win32api
+
 class Mouse:
     def __init__(self):
         self.clicked = False
@@ -5,9 +7,6 @@ class Mouse:
         self.init_x = 0 # for scrolling
         self.init_y = 0
         self.x, self.y = win32api.GetCursorPos()
-
-    def get_pos(self):
-        return win32api.GetCursorPos()
 
     def left_click(self):
         if self.clicked:
@@ -68,6 +67,3 @@ def scroll():
         mouse.init_x, mouse.init_y = win32api.GetCursorPos()
     mouse.scrolling = True
     mouse.scroll()
-
-def check_gesture(num):
-    
