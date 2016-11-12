@@ -3,6 +3,7 @@ import numpy as np
 import math
 import win32api, win32con
 from mouse_commands import *
+from random import randint
 
 
 """ENG_STATES = {
@@ -126,6 +127,48 @@ def getR(point, center):
 
 def do_gesture(num):
     STATES[num]()
+
+def rps():
+    cap = cv2.VideoCapture(0)
+    lst=[]
+    n=0
+    while n<500:
+        # ugliest workaround. joe: "*frown"
+        try:
+
+            ret, img = cap.read()
+            cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
+            crop_img = img[100:300, 100:300]
+
+            thresh1 = threshold(crop_img)
+            cv2.imshow('Thresholded', thresh1)
+
+            image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+
+            handContour = extractHandContour(contours)
+            palmCenter, palmRadius = findCircle(handContour)
+
+            drawing = np.zeros(crop_img.shape,np.uint8)
+
+            fingers = getFingers(handContour, palmCenter, (palmRadius * FINGER_THRESH)**2)
+
+            lst.append((len(fingers)))
+
+            drawing = cv2.flip(drawing, 1)
+            img = cv2.flip(img, 1)
+            cv2.imshow('drawing', drawing)
+            cv2.imshow('Gesture', img)
+            # all_img = np.hstack((drawing, crop_img))
+
+            k = cv2.waitKey(10)
+            if k == 27:
+                break
+            n+=1
+        return lst
+        except Exception as e:
+            print(e)
+            pass
 
 def main():
     cap = cv2.VideoCapture(0)
