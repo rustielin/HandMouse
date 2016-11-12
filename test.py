@@ -8,8 +8,8 @@ def threshold(img):
     grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
     value = (35, 35)
     blurred = cv2.GaussianBlur(grey, value, 0)
-    _, threshholded = cv2.threshold(blurred, 35, 255,
-                               cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    _, threshholded = cv2.threshold(blurred, 40, 255,
+                               cv2.THRESH_BINARY)
     return threshholded
 
 def extractHandContour(contours):
@@ -66,109 +66,130 @@ def findHullAndDefects(handContour):
     defects = cv2.convexityDefects(handContour, hullHandContour)
     return hullPoints, defects
 
+def drawVertices(points, drawing):
+    for i in xrange(len(points)):
+            for j in xrange(len(points[i])):
+                cv2.circle(drawing, (points[i][j][0], points[i][j][1]), 2, (255,255,255))
+
+# def getNumFingers(points):
+
 
 cap = cv2.VideoCapture(0)
 
 while(cap.isOpened()):
-    ret, img = cap.read()
-    cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
-    crop_img = img[100:300, 100:300]
-    # crop_img = img
 
-    thresh1 = threshold(crop_img)
+    # ugliest workaround. joe: "*frown"
+    try:
+        ret, img = cap.read()
+        cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
+        crop_img = img[100:300, 100:300]
+        # crop_img = img
 
-    cv2.imshow('Thresholded', thresh1)
+        thresh1 = threshold(crop_img)
 
-    # extract contours; robust for opencv 2 and 3
-    (version, _, _) = cv2.__version__.split('.')
-    if version is '3':
-        image, contours, hierarchy = cv2.findContours(thresh1.copy(), \
-               cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    elif version is '2':
-        contours, hierarchy = cv2.findContours(thresh1.copy(),cv2.RETR_TREE, \
-               cv2.CHAIN_APPROX_NONE)
+        cv2.imshow('Thresholded', thresh1)
 
-    handContour = extractHandContour(contours)
-    minX, minY, handWidth, handHeight = cv2.boundingRect(handContour)
-
-    palmCenter, palmRadius = findCircle(handContour)
-
-    x = 1920 -  palmCenter[0] * 1920//200
-    y = palmCenter[1] * 1080//200
-
-    win32api.SetCursorPos((x, y))
+        image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
 
-    # find all that shit
-    hull, defects = findHullAndDefects(handContour)
+        handContour = extractHandContour(contours)
+        palmCenter, palmRadius = findCircle(handContour)
+
+        minX, minY, handWidth, handHeight = cv2.boundingRect(handContour)
+
+        # palmCenter, palmRadius = findCircle(handContour)
+
+        # x = 1920 -  palmCenter[0] * 1920//200
+        # y = palmCenter[1] * 1080//200
+        #
+        # win32api.SetCursorPos((x, y))
 
 
-
-    cnt = max(contours, key = lambda x: cv2.contourArea(x))
-
-    x,y,w,h = cv2.boundingRect(cnt)
-    cv2.rectangle(crop_img,(x,y),(x+w,y+h),(0,0,255),0)
-
-    # hull = cv2.convexHull(cnt)
-
-    drawing = np.zeros(crop_img.shape,np.uint8)
-    cv2.drawContours(drawing,[cnt],0,(0,255,0),0)
-    cv2.drawContours(drawing,[hull],0,(0,0,255),0)
-
-    # draw the circle
-    cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 10)
-    cv2.circle(drawing, tuple(palmCenter),
-                   10, (255, 0, 0), -2)
-
-
-    # draw hand contour
-    cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
+        # find all that shit
+        hullPoints, defects = findHullAndDefects(handContour)
 
 
 
-    hull = cv2.convexHull(cnt,returnPoints = False)
-    # defects = cv2.convexityDefects(cnt,hull)
-    count_defects = 1 # was 0
-    cv2.drawContours(thresh1, contours, -1, (0,255,0), 3)
-    for i in range(defects.shape[0]):
-        s, e, f, d = defects[i,0]
-        start = tuple(cnt[s][0])
-        end = tuple(cnt[e][0])
-        far = tuple(cnt[f][0])
-        a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
-        b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
-        c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
-        # angle = math.acos((b**2 + c**2 - a**2)/(2*b*c)) * 57
-        # if angle <= 100 and d > 6:
-        #     count_defects += 1
-        #     cv2.circle(crop_img,far,1,[0,0,255],-1)
-        #dist = cv2.pointPolygonTest(cnt,far,True)
-        cv2.line(crop_img,start,end,[0,255,0],2)
-        #cv2.circle(crop_img,far,5,[0,0,255],-1)
-    if count_defects == 6:
-        cv2.putText(img,"5 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        mouse.reset()
-    elif count_defects == 2: #assumes fist
-        cv2.putText(img,"1 finger", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        if not hasattr(mouse, "init_x") or not mouse.init_x:
-            mouse.init_x, mouse.init_y = mouse.get_pos()
-        #mouse.scroll()
-    elif count_defects == 3:
-        cv2.putText(img, "2 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-    elif count_defects == 4:
-        #mouse.left_click()
+
+
+        # cnt = max(contours, key = lambda x: cv2.contourArea(x))
+        #
+        # x,y,w,h = cv2.boundingRect(cnt)
+        # cv2.rectangle(crop_img,(x,y),(x+w,y+h),(0,0,255),0)
+
+
+
+
+
+
+        # hull = cv2.convexHull(cnt)
+
+        drawing = np.zeros(crop_img.shape,np.uint8)
+        # cv2.drawContours(drawing,[cnt],0,(0,255,0),0)
+        # cv2.drawContours(drawing,[hull],0,(0,0,255),0)
+
+        # draw the circle
+        cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 10)
+        cv2.circle(drawing, tuple(palmCenter),
+                       10, (255, 0, 0), -2)
+
+
+        # draw hand contour
+        cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
+        # drawVertices(handContour, drawing)
+
+        # = draw hull contour
+        cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
+        drawVertices(hullPoints, drawing)
+
+
+        # hull = cv2.convexHull(cnt,returnPoints = False)
+        # # defects = cv2.convexityDefects(cnt,hull)
+        # count_defects = 1 # was 0
+        # cv2.drawContours(thresh1, contours, -1, (0,255,0), 3)
+        # for i in range(defects.shape[0]):
+        #     s, e, f, d = defects[i,0]
+        #     start = tuple(cnt[s][0])
+        #     end = tuple(cnt[e][0])
+        #     far = tuple(cnt[f][0])
+        #     a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
+        #     b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
+        #     c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
+        #     # angle = math.acos((b**2 + c**2 - a**2)/(2*b*c)) * 57
+        #     # if angle <= 100 and d > 6:
+        #     #     count_defects += 1
+        #     #     cv2.circle(crop_img,far,1,[0,0,255],-1)
+        #     #dist = cv2.pointPolygonTest(cnt,far,True)
+        #     cv2.line(crop_img,start,end,[0,255,0],2)
+        #     #cv2.circle(crop_img,far,5,[0,0,255],-1)
+        # if count_defects == 6:
+        #     cv2.putText(img,"5 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        #     mouse.reset()
+        # elif count_defects == 2: #assumes fist
+        #     cv2.putText(img,"1 finger", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        #     if not hasattr(mouse, "init_x") or not mouse.init_x:
+        #         mouse.init_x, mouse.init_y = mouse.get_pos()
+        #     #mouse.scroll()
+        # elif count_defects == 3:
+        #     cv2.putText(img, "2 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        # elif count_defects == 4:
+        #     #mouse.left_click()
+        #     pass
+        #     #cv2.putText(img,"3 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        # elif count_defects == 5:
+        #     cv2.putText(img,"4 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        # else:
+        #     cv2.putText(img,"PROJECT: Hand Mouse", (50,50),\
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        cv2.imshow('drawing', drawing)
+        #cv2.imshow('end', crop_img)
+
+        cv2.imshow('Gesture', img)
+        all_img = np.hstack((drawing, crop_img))
+
+        # cv2.imshow('Contours', all_img)
+        k = cv2.waitKey(10)
+        if k == 27:
+            break
+    except:
         pass
-        #cv2.putText(img,"3 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-    elif count_defects == 5:
-        cv2.putText(img,"4 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-    else:
-        cv2.putText(img,"PROJECT: Hand Mouse", (50,50),\
-                    cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-    #cv2.imshow('drawing', drawing)
-    #cv2.imshow('end', crop_img)
-    cv2.imshow('Gesture', img)
-    all_img = np.hstack((drawing, crop_img))
-    cv2.imshow('Contours', all_img)
-    k = cv2.waitKey(10)
-    if k == 27:
-        break
