@@ -1,7 +1,7 @@
 import win32api
-SCROLL_INVERSE_GAIN = 5
 
 class Mouse:
+    SCROLL_INVERSE_GAIN = 5
     def __init__(self):
         self.clicked = False
         self.scrolling = False
