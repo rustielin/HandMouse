@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 import win32api, win32con
-from win32api.py import *
+import mouse_commands
 
 cap = cv2.VideoCapture(0)
 while(cap.isOpened()):
@@ -52,24 +52,23 @@ while(cap.isOpened()):
         #dist = cv2.pointPolygonTest(cnt,far,True)
         cv2.line(crop_img,start,end,[0,255,0],2)
         #cv2.circle(crop_img,far,5,[0,0,255],-1)
-    if count_defects == 2: #assumes fist
+    if count_defects == 6:
+        cv2.putText(img,"5 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        reset()
+    elif count_defects == 2: #assumes fist
         cv2.putText(img,"1 finger", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        if not clicked:
-            x, y = capture_mouse_pos()
-        clicked = True
-        new_x, new_y = capture_mouse_pos()
-        dx, dy = new_x - x, new_y - y
-        scroll(dx, dy) #are gains needed?
+        if not hasattr(mouse, "init_x") or not init_x:
+            mouse.init_x, mouse.init_y = mouse.get_pos()
+        mouse.scroll()
+    if mouse.clicked:
+        continue
     elif count_defects == 3:
         cv2.putText(img, "2 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     elif count_defects == 4:
-        left_click()
+        mouse.left_click()
         #cv2.putText(img,"3 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     elif count_defects == 5:
         cv2.putText(img,"4 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-    elif count_defects == 6:
-        cv2.putText(img,"5 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        reset()
     else:
         cv2.putText(img,"PROJECT: Hand Mouse", (50,50),\
                     cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
