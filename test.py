@@ -32,10 +32,10 @@ STATES_W_DRAG = { #click will be held until reset
 STATES = STATES_W_CLICK #can be changed to if/else for user input
 
 def threshold(img):
-    grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
+    grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     value = (17,17)
     blurred = cv2.GaussianBlur(grey, value, 0)
-    _, threshholded = cv2.threshold(blurred, 90, 255,
+    _, threshholded = cv2.threshold(blurred, 150, 255,
                                cv2.THRESH_BINARY)
     return threshholded
 
@@ -86,6 +86,10 @@ def findCircle(handContour):
     palmRadius = cv2.pointPolygonTest(handContour, tuple(palmCenter), True)
     return palmCenter, palmRadius
 
+def drawCircles(drawing, palmCenter, palmRadius ):
+    cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 2)
+    cv2.circle(drawing, tuple(palmCenter), int(FINGER_THRESH * palmRadius), (255, 0, 0), 2)
+
 def findHullAndDefects(handContour):
     hullHandContour = cv2.convexHull(handContour, returnPoints = False)
     hullPoints = [handContour[i[0]] for i in hullHandContour]
@@ -120,76 +124,60 @@ def getFingers(points, center, thresh):
 def getR(point, center):
     return ((point[0] - center[0])**2 + (point[1] - center[1])**2)
 
-
-cap = cv2.VideoCapture(0)
-
-while(cap.isOpened()):
-
-    # ugliest workaround. joe: "*frown"
-    try:
-        ret, img = cap.read()
-        cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
-        crop_img = img[100:300, 100:300]
-
-
-        thresh1 = threshold(crop_img)
-        cv2.imshow('Thresholded', thresh1)
-
-        image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
-
-        handContour = extractHandContour(contours)
-        palmCenter, palmRadius = findCircle(handContour)
-
-        drawing = np.zeros(crop_img.shape,np.uint8)
-
-        fingers = getFingers(handContour, palmCenter, (palmRadius * FINGER_THRESH)**2)
-        num_fingers = len(fingers)
-
-
-        print(len(fingers))
-
-        minX, minY, handWidth, handHeight = cv2.boundingRect(handContour)
-        x = palmCenter[0]
-        y = palmCenter[1]
-        # win32api.SetCursorPos((x, y))
-
-
-        # find all that shit
-        hullPoints, defects = findHullAndDefects(handContour)
-
-
-        mouse.set_pos(x, y)
-        # drawing = np.zeros(crop_img.shape,np.uint8)
-
-
-        drawFingers(fingers, drawing, 10, (255, 255, 0))
-
-
-        # draw the circle
-        cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 2)
-        cv2.circle(drawing, tuple(palmCenter), int(FINGER_THRESH * palmRadius), (255, 0, 0), 2)
-
-
-        # draw hand contour
-        cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
-
-        # = draw hull contour
-        cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
-        # drawVertices(hullPoints, drawing)
-
-
-        drawing = cv2.flip(drawing, 1)
-        img = cv2.flip(img, 1)
-        cv2.imshow('drawing', drawing)
-        cv2.imshow('Gesture', img)
-        all_img = np.hstack((drawing, crop_img))
-
-        k = cv2.waitKey(10)
-        if k == 27:
-            break
-    except:
-        pass
-
 def do_gesture(num):
     STATES[num]()
+
+def main():
+    cap = cv2.VideoCapture(0)
+    while True:
+        # ugliest workaround. joe: "*frown"
+        try:
+            ret, img = cap.read()
+            cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
+            crop_img = img[100:300, 100:300]
+
+            thresh1 = threshold(crop_img)
+            cv2.imshow('Thresholded', thresh1)
+
+            image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+
+            handContour = extractHandContour(contours)
+            palmCenter, palmRadius = findCircle(handContour)
+
+            drawing = np.zeros(crop_img.shape,np.uint8)
+
+            fingers = getFingers(handContour, palmCenter, (palmRadius * FINGER_THRESH)**2)
+            num_fingers = len(fingers)
+
+
+            print(len(fingers))
+
+            # find all that shit and mark it
+            hullPoints, defects = findHullAndDefects(handContour)
+            drawFingers(fingers, drawing, 10, (255, 255, 0))
+            drawCircles(drawing, palmCenter, palmRadius)
+            cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
+            cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
+
+            # move the mouse
+            x = palmCenter[0]
+            y = palmCenter[1]
+            mouse.set_pos(x, y)
+
+            drawing = cv2.flip(drawing, 1)
+            img = cv2.flip(img, 1)
+            cv2.imshow('drawing', drawing)
+            cv2.imshow('Gesture', img)
+            # all_img = np.hstack((drawing, crop_img))
+
+            k = cv2.waitKey(10)
+            if k == 27:
+                break
+        except Exception as e:
+            print(e)
+            pass
+
+
+if __name__ == '__main__':
+    main()
