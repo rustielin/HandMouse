@@ -61,7 +61,7 @@ class Mouse:
         y = y * width//200
         center = (self.init_x, self.init_y)
         point = (x, y)
-        if not clicked or distance(point, center) > DIST_THRESH:
+        if not self.clicked or distance(point, center) > DIST_THRESH:
             win32api.SetCursorPos((x, y))
             self.x, self.y = x, y
         else:
