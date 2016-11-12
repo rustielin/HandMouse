@@ -4,6 +4,9 @@ import math
 import win32api, win32con
 from mouse_commands import *
 SCROLL_INVERSE_GAIN = 5
+STATES = {
+
+}
 
 
 def threshold(img):

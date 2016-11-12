@@ -68,3 +68,6 @@ def scroll():
         mouse.init_x, mouse.init_y = win32api.GetCursorPos()
     mouse.scrolling = True
     mouse.scroll()
+
+def check_gesture(num):
+    
