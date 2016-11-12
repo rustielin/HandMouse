@@ -8,7 +8,7 @@ def threshold(img):
     grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
     value = (35, 35)
     blurred = cv2.GaussianBlur(grey, value, 0)
-    _, threshholded = cv2.threshold(blurred, 40, 255,
+    _, threshholded = cv2.threshold(blurred, 80, 255,
                                cv2.THRESH_BINARY)
     return threshholded
 
@@ -99,10 +99,10 @@ while(cap.isOpened()):
 
         # palmCenter, palmRadius = findCircle(handContour)
 
-        # x = 1920 -  palmCenter[0] * 1920//200
-        # y = palmCenter[1] * 1080//200
-        #
-        # win32api.SetCursorPos((x, y))
+        x = 1920 -  palmCenter[0] * 1920//200
+        y = palmCenter[1] * 1080//200
+
+        win32api.SetCursorPos((x, y))
 
 
         # find all that shit
