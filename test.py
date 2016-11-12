@@ -3,6 +3,8 @@ import numpy as np
 import math
 import win32api, win32con
 from mouse_commands import *
+SCROLL_INVERSE_GAIN = 5
+
 
 def threshold(img):
     grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
@@ -97,7 +99,7 @@ while(cap.isOpened()):
     y = palmCenter[1] * 1080//200
 
     win32api.SetCursorPos((x, y))
-
+    mouse.x, mouse.y = win32api.GetCursorPos()
 
     # find all that shit
     hull, defects = findHullAndDefects(handContour)
@@ -109,7 +111,7 @@ while(cap.isOpened()):
     x,y,w,h = cv2.boundingRect(cnt)
     cv2.rectangle(crop_img,(x,y),(x+w,y+h),(0,0,255),0)
 
-    # hull = cv2.convexHull(cnt)
+    hull = cv2.convexHull(cnt)
 
     drawing = np.zeros(crop_img.shape,np.uint8)
     cv2.drawContours(drawing,[cnt],0,(0,255,0),0)
@@ -127,8 +129,8 @@ while(cap.isOpened()):
 
 
     hull = cv2.convexHull(cnt,returnPoints = False)
-    # defects = cv2.convexityDefects(cnt,hull)
-    count_defects = 1 # was 0
+    defects = cv2.convexityDefects(cnt,hull)
+    count_defects = 1
     cv2.drawContours(thresh1, contours, -1, (0,255,0), 3)
     for i in range(defects.shape[0]):
         s, e, f, d = defects[i,0]
@@ -138,27 +140,23 @@ while(cap.isOpened()):
         a = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
         b = math.sqrt((far[0] - start[0])**2 + (far[1] - start[1])**2)
         c = math.sqrt((end[0] - far[0])**2 + (end[1] - far[1])**2)
-        # angle = math.acos((b**2 + c**2 - a**2)/(2*b*c)) * 57
-        # if angle <= 100 and d > 6:
-        #     count_defects += 1
-        #     cv2.circle(crop_img,far,1,[0,0,255],-1)
-        #dist = cv2.pointPolygonTest(cnt,far,True)
+        angle = math.acos((b**2 + c**2 - a**2)/(2*b*c)) * 57
+        if angle <= 100 and d > 6:
+            count_defects += 1
+            cv2.circle(crop_img,far,1,[0,0,255],-1)
+        dist = cv2.pointPolygonTest(cnt,far,True)
         cv2.line(crop_img,start,end,[0,255,0],2)
         #cv2.circle(crop_img,far,5,[0,0,255],-1)
     if count_defects == 6:
         cv2.putText(img,"5 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
         mouse.reset()
     elif count_defects == 2: #assumes fist
-        cv2.putText(img,"1 finger", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
-        if not hasattr(mouse, "init_x") or not mouse.init_x:
-            mouse.init_x, mouse.init_y = mouse.get_pos()
-        #mouse.scroll()
+        cv2.putText(img,"{}, {}, {}".format(mouse.scrolling, mouse.init_y, mouse.y), (50,400), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        scroll()
     elif count_defects == 3:
         cv2.putText(img, "2 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     elif count_defects == 4:
-        #mouse.left_click()
-        pass
-        #cv2.putText(img,"3 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
+        cv2.putText(img,"3 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     elif count_defects == 5:
         cv2.putText(img,"4 fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, 2)
     else:
