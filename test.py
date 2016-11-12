@@ -5,14 +5,37 @@ import win32api, win32con
 from mouse_commands import *
 
 
-SCROLL_INVERSE_GAIN = 5
+"""ENG_STATES = {
+    0: "fist"
+    1: "single finger"
+    3: "three fingers"
+    5: "open hand"
+}"""
 
+mouse = Mouse()
+FINGER_THRESH = 2.0
+
+STATES_W_CLICK = { #mouse action will be instant, click cannot be held
+    0: mouse.scroll,
+    1: mouse.left_click,
+    3: mouse.right_click,
+    5: mouse.reset
+}
+
+STATES_W_DRAG = { #click will be held until reset
+    0: mouse.scroll,
+    1: mouse.left_press,
+    3: mouse.right_press,
+    5: mouse.reset
+}
+
+STATES = STATES_W_CLICK #can be changed to if/else for user input
 
 def threshold(img):
     grey = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
     value = (17,17)
     blurred = cv2.GaussianBlur(grey, value, 0)
-    _, threshholded = cv2.threshold(blurred, 120, 255,
+    _, threshholded = cv2.threshold(blurred, 90, 255,
                                cv2.THRESH_BINARY)
     return threshholded
 
@@ -75,6 +98,11 @@ def drawVertices(points, drawing, width=2, color=(255,255,255)):
             for j in xrange(len(points[i])):
                 cv2.circle(drawing, (points[i][j][0], points[i][j][1]), width, color)
 
+
+def drawFingers(points, drawing, width=8, color=(255,255,255)):
+    for i in xrange(len(points)):
+        cv2.circle(drawing, (int(points[i][0]), int(points[i][1])), width, color, -1)
+
 # list the fucking fingers
 def getFingers(points, center, thresh):
     fingers = []
@@ -86,7 +114,7 @@ def getFingers(points, center, thresh):
             fingers.append(points[i-1, 0])
         last_last_r = last_r
         last_r = this_r
-    return fingers
+    return np.array(fingers)
 
 # actually squared
 def getR(point, center):
@@ -102,7 +130,7 @@ while(cap.isOpened()):
         ret, img = cap.read()
         cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
         crop_img = img[100:300, 100:300]
-        # crop_img = img
+
 
         thresh1 = threshold(crop_img)
         cv2.imshow('Thresholded', thresh1)
@@ -115,60 +143,45 @@ while(cap.isOpened()):
 
         drawing = np.zeros(crop_img.shape,np.uint8)
 
-        fingers = getFingers(handContour, palmCenter, (palmRadius * 1.6)**2)
+        fingers = getFingers(handContour, palmCenter, (palmRadius * FINGER_THRESH)**2)
         num_fingers = len(fingers)
-        drawVertices([fingers], drawing, 10, (255, 255, 0))
-        print(num_fingers)
+
+
+        print(len(fingers))
 
         minX, minY, handWidth, handHeight = cv2.boundingRect(handContour)
-
-        x = 1920 -  palmCenter[0] * 1920//200
-        y = palmCenter[1] * 1080//200
-
-        win32api.SetCursorPos((x, y))
+        x = palmCenter[0]
+        y = palmCenter[1]
+        # win32api.SetCursorPos((x, y))
 
 
         # find all that shit
         hullPoints, defects = findHullAndDefects(handContour)
 
 
+        mouse.set_pos(x, y)
+        # drawing = np.zeros(crop_img.shape,np.uint8)
 
 
+        drawFingers(fingers, drawing, 10, (255, 255, 0))
 
-        # cnt = max(contours, key = lambda x: cv2.contourArea(x))
-        #
-        # x,y,w,h = cv2.boundingRect(cnt)
-        # cv2.rectangle(crop_img,(x,y),(x+w,y+h),(0,0,255),0)
-
-
-        win32api.SetCursorPos((x, y))
-        mouse.x, mouse.y = win32api.GetCursorPos()
-
-
-        # hull = cv2.convexHull(cnt)
-
-        drawing = np.zeros(crop_img.shape,np.uint8)
-        # cv2.drawContours(drawing,[cnt],0,(0,255,0),0)
-        # cv2.drawContours(drawing,[hull],0,(0,0,255),0)
 
         # draw the circle
-        cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 10)
-        cv2.circle(drawing, tuple(palmCenter),
-                       10, (255, 0, 0), -2)
-        # hull = cv2.convexHull(cnt)
+        cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 2)
+        cv2.circle(drawing, tuple(palmCenter), int(FINGER_THRESH * palmRadius), (255, 0, 0), 2)
 
 
         # draw hand contour
         cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
-        # drawVertices(handContour, drawing)
 
         # = draw hull contour
         cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
-        drawVertices(hullPoints, drawing)
+        # drawVertices(hullPoints, drawing)
 
 
+        drawing = cv2.flip(drawing, 1)
+        img = cv2.flip(img, 1)
         cv2.imshow('drawing', drawing)
-
         cv2.imshow('Gesture', img)
         all_img = np.hstack((drawing, crop_img))
 
@@ -177,3 +190,6 @@ while(cap.isOpened()):
             break
     except:
         pass
+
+def do_gesture(num):
+    STATES[num]()
