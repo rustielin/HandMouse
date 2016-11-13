@@ -179,9 +179,7 @@ def rps():
     last2_num_fingers = 0
     last3_num_fingers = 0
 
-
-    while n<5:
-
+    while True:
         ret, img = cap.read()
 
         # box in which we're gonna be looking for the hand
@@ -204,13 +202,10 @@ def rps():
             num_fingers = len(fingers)
             if num_fingers > 5:
                 num_fingers = 5
-            # print(num_fingers)
         except Exception as e:
             num_fingers = last2_num_fingers
 
         if len(fingers) != last_num_fingers and last2_num_fingers == last3_num_fingers and len(fingers) == last2_num_fingers:
-            lst.append(len(fingers))
-            # winsound.PlaySound("pop.wav", winsound.SND_ASYNC)
             last_num_fingers = len(fingers)
 
 
@@ -226,20 +221,7 @@ def rps():
             cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
             cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
         except Exception as e:
-            # print("This is a draw error")
-            # print(e)
             pass
-
-
-        # move the mouse
-        if recording_mouse:
-            x = palmCenter[0]
-            y = palmCenter[1]
-            mouse.set_pos(x, y)
-
-        # do_gesture(num_fingers)
-
-
 
 
         drawing = cv2.flip(drawing, 1)
@@ -272,6 +254,79 @@ def rps():
             if BINARY_THRESH < 0:
                 BINARY_THRESH = 0
             print(BINARY_THRESH)
+        else:
+            pass
+
+    while n<3:
+
+        ret, img = cap.read()
+
+        # box in which we're gonna be looking for the hand
+        cv2.rectangle(img,(100 + DETECT_SIZE,100 + DETECT_SIZE),(99,99),(0,255,0),0)
+        crop_img = img[100:100 + DETECT_SIZE, 100:100 + DETECT_SIZE]
+
+        # convert to binary color via thresholding
+        thresh1 = threshold(crop_img, BINARY_THRESH)
+
+        try:
+            image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+            handContour = extractHandContour(contours)
+            palmCenter, palmRadius = findCircle(handContour)
+            drawing = np.zeros(crop_img.shape,np.uint8)
+            fingers = getFingers(handContour, palmCenter, (palmRadius * FINGER_THRESH)**2)
+
+            fingers = correctFingers(fingers, (palmRadius * 0.2) ** 2)
+
+            num_fingers = len(fingers)
+            if num_fingers > 5:
+                num_fingers = 5
+            # print(num_fingers)
+        except Exception as e:
+            num_fingers = last2_num_fingers
+
+        if len(fingers) != last_num_fingers and last2_num_fingers == last3_num_fingers and len(fingers) == last2_num_fingers:
+            lst.append(len(fingers))
+            last_num_fingers = len(fingers)
+
+
+        last3_num_fingers = last2_num_fingers
+        last2_num_fingers = len(fingers)
+
+        # find all that shit and mark it
+
+        try:
+            hullPoints, defects = findHullAndDefects(handContour)
+            drawFingers(fingers, drawing, 10, (255, 255, 0))
+            drawCircles(drawing, palmCenter, palmRadius)
+            cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
+            cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
+        except Exception as e:
+            pass
+
+
+
+
+        drawing = cv2.flip(drawing, 1)
+        img = cv2.flip(img, 1)
+        thresh1 = cv2.flip(thresh1, 1)
+
+        final_image[:height, :width] = img
+        final_image[:DETECT_SIZE, width:width+DETECT_SIZE] = drawing
+        thresh1 = cv2.resize(thresh1, (DETECT_SIZE, DETECT_SIZE))
+        thresh1 = cv2.cvtColor(thresh1,cv2.COLOR_GRAY2RGB)
+
+        cv2.putText(final_image, str(num_fingers) + " fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2)
+
+
+        cv2.imshow('FINAL', final_image)
+        cv2.imshow('Thresholded', thresh1)
+
+
+        # Key press
+        k = cv2.waitKey(10)
+        if k == 27:
+            break
         else:
             pass
         n+=1
