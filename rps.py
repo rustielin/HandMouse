@@ -3,13 +3,16 @@ import cv2
 import numpy
 from collections import Counter
 import test
+
 t=["rock", 'paper', 'scissors']
 player=False
 while player==False:
-	lst=rps()
+	lst=test.rps()
+	print(lst)
 	rnd=randint(0,2)
 	computer=t[rnd]
 	data=Counter(lst[20:])
+	print(data.most_common(1))
 	player=data.most_common(1)
 
 #account for multiple hand positions rock=0,1 paper=4,5 scissors=2,3
@@ -20,7 +23,7 @@ while player==False:
 			cv2.putText(img,"Tie!!!", (85,70), cv2.FONT_HERSHEY_SIMPLEX, 1, 0, 3)
 		elif player==2 or player==3:
 			cv2.putText(img,"You Lose!!!", (47,70), cv2.FONT_HERSHEY_SIMPLEX, 1, 0, 3)
-		elif player==5 or player==4: 
+		elif player==5 or player==4:
 			cv2.putText(img,"You Win!!!", (50,70), cv2.FONT_HERSHEY_SIMPLEX, 1, 0,3)
 		else:
 			img=cv2.imread('Harambe.jpg')
