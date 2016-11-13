@@ -209,6 +209,8 @@ def main():
     height, width = img.shape[:2]
     final_image = np.zeros((height, width*2, 3), np.uint8)
 
+    recording_mouse = True
+
     #
     #
     # # for the sounds
@@ -244,13 +246,14 @@ def main():
             num_fingers = len(fingers)
             if num_fingers > 5:
                 num_fingers = 5
-            print(num_fingers)
+            # print(num_fingers)
         except Exception as e:
             num_fingers = last2_num_fingers
             print(e)
 
 
         if len(fingers) != last_num_fingers and last2_num_fingers == last3_num_fingers and len(fingers) == last2_num_fingers:
+            print(len(fingers))
             winsound.PlaySound("pop.wav", winsound.SND_ASYNC)
             last_num_fingers = len(fingers)
 
@@ -273,9 +276,10 @@ def main():
 
 
         # move the mouse
-        # x = palmCenter[0]
-        # y = palmCenter[1]
-        # mouse.set_pos(x, y)
+        if recording_mouse:
+            x = palmCenter[0]
+            y = palmCenter[1]
+            mouse.set_pos(x, y)
 
         # do_gesture(num_fingers)
 
@@ -308,6 +312,10 @@ def main():
             if BINARY_THRESH < 0:
                 BINARY_THRESH = 0
             print(BINARY_THRESH)
+        elif k == 114:
+            recording_mouse = not recording_mouse
+        else:
+            print k
 
 
         #
