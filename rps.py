@@ -9,7 +9,6 @@ while player==False:
 	lst=test.rps()
 	rnd=randint(0,2)
 	computer=t[rnd]
-	data=Counter(lst[20:])
 	player=mode(lst)
 
 #account for multiple hand positions rock=0,1 paper=4,5 scissors=2,3
