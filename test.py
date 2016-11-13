@@ -37,6 +37,7 @@ STATES_W_DRAG = { #click will be held until reset
 
 STATES = STATES_W_CLICK #can be changed to if/else for user input
 
+# takes an image, grayscale, gaussian blur, then adjustable threshold (waitkey) for binary color
 def threshold(img, binary_thresh):
     grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     value = (17,17)
@@ -44,7 +45,7 @@ def threshold(img, binary_thresh):
     _, threshholded = cv2.threshold(blurred, binary_thresh, 255, cv2.THRESH_BINARY)
     return threshholded
 
-
+# useful to get rid of stuff that's not a hand
 def touchingEdge(contour, dimensions):
     x, y, w, h = cv2.boundingRect(contour)
     if x <= 1 or y <= 1:
@@ -53,6 +54,7 @@ def touchingEdge(contour, dimensions):
         return True
     return False
 
+# assume the hand is the biggest contour
 def extractHandContour(contours):
     maxArea, index = 0, 0
     for i in xrange(len(contours)):
@@ -74,6 +76,7 @@ def centerWithReduction(handContour):
         maxRadius = 0
         for x in xrange(w):
             for y in xrange(h):
+                # find the center of the circle by trying all x and y, iterally
                 rad = cv2.pointPolygonTest(shrunk, (tx + x, ty + y), True)
                 if rad > maxRadius:
                     maxPoint = (tx + x, ty + y)
@@ -95,11 +98,13 @@ def centerWithReduction(handContour):
 
         return np.array(maxPoint)
 
+# find center and radius of circle inscribed in hand
 def findCircle(handContour):
     palmCenter = centerWithReduction(handContour)
     palmRadius = cv2.pointPolygonTest(handContour, tuple(palmCenter), True)
     return palmCenter, palmRadius
 
+# draw circles inscribed in hand and threshold for finger detection
 def drawCircles(drawing, palmCenter, palmRadius):
     cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 2)
     cv2.circle(drawing, tuple(palmCenter), int(FINGER_THRESH * palmRadius), (255, 0, 0), 2)
@@ -136,8 +141,6 @@ def getFingers(points, center, thresh):
         last_r = this_r
     return np.array(fingers)
 
-
-
 def correctFingers(fingers, radius):
     try:
         i = 0
@@ -171,7 +174,6 @@ def rps():
     final_image = np.zeros((height, width*2, 3), np.uint8)
 
     recording_mouse = True
-
 
     last_num_fingers = 0
     last2_num_fingers = 0
@@ -248,13 +250,11 @@ def rps():
         final_image[:DETECT_SIZE, width:width+DETECT_SIZE] = drawing
         thresh1 = cv2.resize(thresh1, (DETECT_SIZE, DETECT_SIZE))
         thresh1 = cv2.cvtColor(thresh1,cv2.COLOR_GRAY2RGB)
-        # final_image[DETECT_SIZE:DETECT_SIZE*2, width:width+DETECT_SIZE] = thresh1
 
         cv2.putText(final_image, str(num_fingers) + " fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2)
 
 
         cv2.imshow('FINAL', final_image)
-        # cv2.imshow('drawing', drawing)
         cv2.imshow('Thresholded', thresh1)
 
 
@@ -262,8 +262,6 @@ def rps():
         k = cv2.waitKey(10)
         if k == 27:
             break
-        elif k == -1:
-            continue
         elif k == 43: # PLUS
             BINARY_THRESH += 2
             if BINARY_THRESH > 255:
@@ -274,12 +272,12 @@ def rps():
             if BINARY_THRESH < 0:
                 BINARY_THRESH = 0
             print(BINARY_THRESH)
-        elif k == 114:
-            recording_mouse = not recording_mouse
         else:
             pass
         n+=1
     return lst
+
+
 def main():
     BINARY_THRESH = 30
     cap = cv2.VideoCapture(0)

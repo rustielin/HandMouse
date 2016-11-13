@@ -16,7 +16,7 @@ def mode(list):
         if d[key] > max:
             max = d[key]
 
-    max_k = []      
+    max_k = []
     for key in keys:
         if d[key] == max:
             max_k.append(key),
@@ -26,6 +26,7 @@ t=["rock", 'paper', 'scissors']
 player=False
 while player==False:
 	lst=test.rps()
+	print("LISTTTTTT", lst)
 	rnd=randint(0,2)
 	computer=t[rnd]
 	player=mode(lst)
