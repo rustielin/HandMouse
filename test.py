@@ -36,10 +36,6 @@ STATES_W_DRAG = { #click will be held until reset
 
 STATES = STATES_W_CLICK #can be changed to if/else for user input
 
-#
-# def nothing(x):
-#     pass
-
 def threshold(img, binary_thresh):
     grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     value = (7,7)
@@ -132,25 +128,16 @@ def correctFingers(fingers, radius):
     try:
         i = 0
         while i < len(fingers) and len(fingers) > 1:
-        # for i in xrange(len(fingers)):
             if getR(fingers[i], fingers[i-1]) < radius:
                 fingers = np.delete(fingers, i-1)
                 if not i:
                     i += 1
-                # print(fingers)
-                # print(len(fingers))
             else:
                 i += 1
-
         return fingers
 
     except Exception as e:
-        # print("correctFingers ERROR:")
-        # print(e)
         return fingers
-
-
-
 
 # actually squared
 def getR(point, center):
@@ -169,18 +156,14 @@ def main():
 
     recording_mouse = True
 
-    #
-    #
-    # # for the sounds
+
     last_num_fingers = 0
     last2_num_fingers = 0
     last3_num_fingers = 0
-    # CHUNK = 1024
 
 
     while True:
-        # ugliest workaround. joe: "*frown"
-        # try:
+
         ret, img = cap.read()
 
         # box in which we're gonna be looking for the hand
@@ -189,6 +172,13 @@ def main():
 
         # convert to binary color via thresholding
         thresh1 = threshold(crop_img, BINARY_THRESH)
+
+        # maybe make a border to fix some stuff
+        bordersize = 10
+        mean = 0
+        thresh1 =cv2.copyMakeBorder(thresh1, top=bordersize, bottom=bordersize, left=bordersize, right=bordersize, borderType= cv2.BORDER_CONSTANT, value=[mean,mean,mean] )
+
+
 
         try:
             image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -200,7 +190,6 @@ def main():
 
             fingers = correctFingers(fingers, (palmRadius * 0.2) ** 2)
 
-
             num_fingers = len(fingers)
             if num_fingers > 5:
                 num_fingers = 5
@@ -208,7 +197,6 @@ def main():
         except Exception as e:
             num_fingers = last2_num_fingers
             print(e)
-
 
         if len(fingers) != last_num_fingers and last2_num_fingers == last3_num_fingers and len(fingers) == last2_num_fingers:
             print(len(fingers))
@@ -247,11 +235,15 @@ def main():
 
         final_image[:height, :width] = img
         final_image[:DETECT_SIZE, width:width+DETECT_SIZE] = drawing
+        thresh1 = cv2.resize(thresh1, (DETECT_SIZE, DETECT_SIZE))
+        thresh1 = cv2.cvtColor(thresh1,cv2.COLOR_GRAY2RGB)
+        final_image[DETECT_SIZE:DETECT_SIZE*2, width:width+DETECT_SIZE] = thresh1
+
+        cv2.putText(final_image, str(len(fingers)) + " fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2)
 
         cv2.imshow('FINAL', final_image)
         # cv2.imshow('drawing', drawing)
-        cv2.imshow('Gesture', img)
-        cv2.imshow('Thresholded', thresh1)
+        # cv2.imshow('Thresholded', thresh1)
 
 
         # Key press
@@ -274,13 +266,6 @@ def main():
             recording_mouse = not recording_mouse
         else:
             print k
-
-
-        #
-        # except Exception as e:
-        #     print(e)
-        #     pass
-
 
 if __name__ == '__main__':
     main()
