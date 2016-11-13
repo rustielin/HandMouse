@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import math
 import win32api, win32con
+import winsound
+
 from mouse_commands import *
 
 
@@ -14,6 +16,8 @@ from mouse_commands import *
 
 mouse = Mouse()
 FINGER_THRESH = 2.0
+DETECT_SIZE = 200
+
 
 STATES_W_CLICK = { #mouse action will be instant, click cannot be held
     0: mouse.scroll,
@@ -31,12 +35,15 @@ STATES_W_DRAG = { #click will be held until reset
 
 STATES = STATES_W_CLICK #can be changed to if/else for user input
 
-def threshold(img):
+#
+# def nothing(x):
+#     pass
+
+def threshold(img, binary_thresh):
     grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    value = (17,17)
+    value = (7,7)
     blurred = cv2.GaussianBlur(grey, value, 0)
-    _, threshholded = cv2.threshold(blurred, 150, 255,
-                               cv2.THRESH_BINARY)
+    _, threshholded = cv2.threshold(blurred, binary_thresh, 255, cv2.THRESH_BINARY)
     return threshholded
 
 def extractHandContour(contours):
@@ -86,7 +93,7 @@ def findCircle(handContour):
     palmRadius = cv2.pointPolygonTest(handContour, tuple(palmCenter), True)
     return palmCenter, palmRadius
 
-def drawCircles(drawing, palmCenter, palmRadius ):
+def drawCircles(drawing, palmCenter, palmRadius):
     cv2.circle(drawing, tuple(palmCenter), int(palmRadius), (0, 255, 0), 2)
     cv2.circle(drawing, tuple(palmCenter), int(FINGER_THRESH * palmRadius), (255, 0, 0), 2)
 
@@ -120,6 +127,30 @@ def getFingers(points, center, thresh):
         last_r = this_r
     return np.array(fingers)
 
+def correctFingers(fingers, radius):
+    try:
+        i = 0
+        while i < len(fingers) and len(fingers) > 1:
+        # for i in xrange(len(fingers)):
+            if getR(fingers[i], fingers[i-1]) < radius:
+                fingers = np.delete(fingers, i-1)
+                if not i:
+                    i += 1
+                # print(fingers)
+                # print(len(fingers))
+            else:
+                i += 1
+
+        return fingers
+
+    except Exception as e:
+        # print("correctFingers ERROR:")
+        # print(e)
+        return fingers
+
+
+
+
 # actually squared
 def getR(point, center):
     return ((point[0] - center[0])**2 + (point[1] - center[1])**2)
@@ -128,55 +159,118 @@ def do_gesture(num):
     STATES[num]()
 
 def main():
+    BINARY_THRESH = 30
     cap = cv2.VideoCapture(0)
+    _, img = cap.read()
+    cv2.imshow('Gesture', img)
+    height, width = img.shape[:2]
+    final_image = np.zeros((height, width*2, 3), np.uint8)
+
+    #
+    #
+    # # for the sounds
+    last_num_fingers = 0
+    last2_num_fingers = 0
+    last3_num_fingers = 0
+    # CHUNK = 1024
+
+
     while True:
         # ugliest workaround. joe: "*frown"
+        # try:
+        ret, img = cap.read()
+
+        # box in which we're gonna be looking for the hand
+        cv2.rectangle(img,(100 + DETECT_SIZE,100 + DETECT_SIZE),(100,100),(0,255,0),0)
+        crop_img = img[100:100 + DETECT_SIZE, 100:100 + DETECT_SIZE]
+
+        # convert to binary color via thresholding
+        thresh1 = threshold(crop_img, BINARY_THRESH)
+
         try:
-            ret, img = cap.read()
-            cv2.rectangle(img,(300,300),(100,100),(0,255,0),0)
-            crop_img = img[100:300, 100:300]
-
-            thresh1 = threshold(crop_img)
-            cv2.imshow('Thresholded', thresh1)
-
             image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
 
             handContour = extractHandContour(contours)
             palmCenter, palmRadius = findCircle(handContour)
-
             drawing = np.zeros(crop_img.shape,np.uint8)
-
             fingers = getFingers(handContour, palmCenter, (palmRadius * FINGER_THRESH)**2)
+
+            fingers = correctFingers(fingers, (palmRadius * 0.2) ** 2)
+
+
             num_fingers = len(fingers)
+            if num_fingers > 5:
+                num_fingers = 5
+            print(num_fingers)
+        except Exception as e:
+            num_fingers = last2_num_fingers
+            print(e)
 
 
-            print(len(fingers))
+        if len(fingers) != last_num_fingers and last2_num_fingers == last3_num_fingers and len(fingers) == last2_num_fingers:
+            winsound.PlaySound("pop.wav", winsound.SND_ASYNC)
+            last_num_fingers = len(fingers)
 
-            # find all that shit and mark it
+
+        last3_num_fingers = last2_num_fingers
+        last2_num_fingers = len(fingers)
+
+        # find all that shit and mark it
+
+        try:
             hullPoints, defects = findHullAndDefects(handContour)
             drawFingers(fingers, drawing, 10, (255, 255, 0))
             drawCircles(drawing, palmCenter, palmRadius)
             cv2.drawContours(drawing, [handContour], 0, (0, 255, 0), 1)
             cv2.drawContours(drawing, [hullPoints], 0, (0, 0, 255), 2)
-
-            # move the mouse
-            x = palmCenter[0]
-            y = palmCenter[1]
-            mouse.set_pos(x, y)
-
-            drawing = cv2.flip(drawing, 1)
-            img = cv2.flip(img, 1)
-            cv2.imshow('drawing', drawing)
-            cv2.imshow('Gesture', img)
-            # all_img = np.hstack((drawing, crop_img))
-
-            k = cv2.waitKey(10)
-            if k == 27:
-                break
         except Exception as e:
-            print(e)
+            # print("This is a draw error")
+            # print(e)
             pass
+
+
+        # move the mouse
+        # x = palmCenter[0]
+        # y = palmCenter[1]
+        # mouse.set_pos(x, y)
+
+        # do_gesture(num_fingers)
+
+        drawing = cv2.flip(drawing, 1)
+        img = cv2.flip(img, 1)
+        thresh1 = cv2.flip(thresh1, 1)
+
+        final_image[:height, :width] = img
+        final_image[:DETECT_SIZE, width:width+DETECT_SIZE] = drawing
+
+        cv2.imshow('FINAL', final_image)
+        # cv2.imshow('drawing', drawing)
+        cv2.imshow('Gesture', img)
+        cv2.imshow('Thresholded', thresh1)
+
+
+        # Key press
+        k = cv2.waitKey(10)
+        if k == 27:
+            break
+        elif k == -1:
+            continue
+        elif k == 43: # PLUS
+            BINARY_THRESH += 2
+            if BINARY_THRESH > 255:
+                BINARY_THRESH = 255
+            print(BINARY_THRESH)
+        elif k == 45: # MINUS
+            BINARY_THRESH -= 2
+            if BINARY_THRESH < 0:
+                BINARY_THRESH = 0
+            print(BINARY_THRESH)
+
+
+        #
+        # except Exception as e:
+        #     print(e)
+        #     pass
 
 
 if __name__ == '__main__':

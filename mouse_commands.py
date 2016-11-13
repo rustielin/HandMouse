@@ -1,4 +1,4 @@
-import win32api
+import win32api, win32con
 from win32api import GetSystemMetrics
 DIST_THRESH = 20
 
@@ -87,4 +87,4 @@ class Mouse:
         self.__init__()
 
 def distance(point1, point2):
-    return sqrt(((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2))
+    return (((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2))**(1/2)
