@@ -1,19 +1,16 @@
 from random import randint
 import cv2
 import numpy
-from collections import Counter
 import test
-
+from scipy.stats import mode
 t=["rock", 'paper', 'scissors']
 player=False
 while player==False:
 	lst=test.rps()
-	print(lst)
 	rnd=randint(0,2)
 	computer=t[rnd]
 	data=Counter(lst[20:])
-	print(data.most_common(1))
-	player=data.most_common(1)
+	player=mode(lst)
 
 #account for multiple hand positions rock=0,1 paper=4,5 scissors=2,3
 	if computer=='rock':
