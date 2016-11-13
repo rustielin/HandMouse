@@ -1,9 +1,11 @@
 import win32api, win32con
 from win32api import GetSystemMetrics
 DIST_THRESH = 20
+width = GetSystemMetrics(0)
+height = GetSystemMetrics(1)
 
 class Mouse:
-    SCROLL_INVERSE_GAIN = 5
+    SCROLL_INVERSE_GAIN = 20
     def __init__(self):
         self.clicked = False
         self.scrolling = False
@@ -55,8 +57,6 @@ class Mouse:
         self.clicked = False
 
     def set_pos(self, x, y):
-        width = GetSystemMetrics(0)
-        height = GetSystemMetrics(1)
         x = width -  x * width//200
         y = y * width//200
         center = (self.init_x, self.init_y)
@@ -68,12 +68,19 @@ class Mouse:
             win32api.SetCursorPos((self.init_x, self.init_y))
             self.x, self.y = self.init_x, self.init_y
 
+    def get_pos(self):
+        return win32api.GetCursorPos()
+
     def scroll(self): # positive direction = up or right
-        if not mouse.scrolling:
-            mouse.init_x, mouse.init_y = win32api.GetCursorPos()
-        mouse.scrolling = True
+        if not self.scrolling:
+            print("Started to scroll!")
+            self.init_x, self.init_y = win32api.GetCursorPos()
+        self.scrolling = True
         h_direction, v_direction = self.x - self.init_x, self.y - self.init_y
-        v_direction = v_direction // SCROLL_INVERSE_GAIN # decrease effect
+        print(self.x, self.init_x)
+        print self.y, self.init_y
+        print h_direction, v_direction
+        v_direction = v_direction // self.SCROLL_INVERSE_GAIN # decrease effect
         try:
             win32api.mouse_event(win32con.MOUSEEVENTF_HWHEEL, x, y, h_direction, 0) # for sideways scrolling
         except:
@@ -85,6 +92,6 @@ class Mouse:
         self.left_unpress()
         self.right_unpress()
         self.__init__()
-
+sqrt = lambda x: x ** 0.5
 def distance(point1, point2):
     return (((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2))**(1/2)
