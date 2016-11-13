@@ -17,7 +17,7 @@ from random import randint
 
 mouse = Mouse()
 FINGER_THRESH = 2.0
-DETECT_SIZE = 200
+DETECT_SIZE = 300
 
 
 STATES_W_CLICK = { #mouse action will be instant, click cannot be held
@@ -30,6 +30,7 @@ STATES_W_CLICK = { #mouse action will be instant, click cannot be held
 STATES_W_DRAG = { #click will be held until reset
     0: mouse.scroll,
     1: mouse.left_press,
+    # 2: lambda: mouse.left_unpress(), mouse.right_unpress(),
     3: mouse.right_press,
     5: mouse.reset
 }
@@ -38,22 +39,31 @@ STATES = STATES_W_CLICK #can be changed to if/else for user input
 
 def threshold(img, binary_thresh):
     grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    value = (7,7)
-    blurred = cv2.GaussianBlur(grey, value, 0)
+    value = (17,17)
+    blurred = cv2.GaussianBlur(grey, value, cv2.BORDER_REPLICATE)
     _, threshholded = cv2.threshold(blurred, binary_thresh, 255, cv2.THRESH_BINARY)
     return threshholded
+
+
+def touchingEdge(contour, dimensions):
+    x, y, w, h = cv2.boundingRect(contour)
+    if x <= 1 or y <= 1:
+        return True
+    if x + w + 1 >= dimensions[0] or y + h + 1 >= dimensions[1]:
+        return True
+    return False
 
 def extractHandContour(contours):
     maxArea, index = 0, 0
     for i in xrange(len(contours)):
         area = cv2.contourArea(contours[i])
-        if area > maxArea:
+        if area > maxArea and not touchingEdge(contours[i], (DETECT_SIZE, DETECT_SIZE)):
             maxArea = area
             index = i
     realHandContour = contours[index]
     realHandLen = cv2.arcLength(realHandContour, True)
-    handContour = cv2.approxPolyDP(realHandContour,
-                                        0.001 * realHandLen, True)
+    handContour = cv2.approxPolyDP(realHandContour, 0.001 * realHandLen, True)
+
     return handContour
 
 def centerWithReduction(handContour):
@@ -109,6 +119,8 @@ def drawVertices(points, drawing, width=2, color=(255,255,255)):
 
 def drawFingers(points, drawing, width=8, color=(255,255,255)):
     for i in xrange(len(points)):
+        if len(points) == 1:
+            print(points[i])
         cv2.circle(drawing, (int(points[i][0]), int(points[i][1])), width, color, -1)
 
 # list the fucking fingers
@@ -124,12 +136,14 @@ def getFingers(points, center, thresh):
         last_r = this_r
     return np.array(fingers)
 
+
+
 def correctFingers(fingers, radius):
     try:
         i = 0
         while i < len(fingers) and len(fingers) > 1:
             if getR(fingers[i], fingers[i-1]) < radius:
-                fingers = np.delete(fingers, i-1)
+                fingers = np.delete(fingers, i-1, 0)
                 if not i:
                     i += 1
             else:
@@ -144,13 +158,14 @@ def getR(point, center):
     return ((point[0] - center[0])**2 + (point[1] - center[1])**2)
 
 def do_gesture(num):
-    STATES[num]()
+    if num in STATES:
+        STATES[num]()
 
 def main():
     BINARY_THRESH = 30
     cap = cv2.VideoCapture(0)
     _, img = cap.read()
-    cv2.imshow('Gesture', img)
+    # cv2.imshow('Gesture', img)
     height, width = img.shape[:2]
     final_image = np.zeros((height, width*2, 3), np.uint8)
 
@@ -167,18 +182,11 @@ def main():
         ret, img = cap.read()
 
         # box in which we're gonna be looking for the hand
-        cv2.rectangle(img,(100 + DETECT_SIZE,100 + DETECT_SIZE),(100,100),(0,255,0),0)
+        cv2.rectangle(img,(100 + DETECT_SIZE,100 + DETECT_SIZE),(99,99),(0,255,0),0)
         crop_img = img[100:100 + DETECT_SIZE, 100:100 + DETECT_SIZE]
 
         # convert to binary color via thresholding
         thresh1 = threshold(crop_img, BINARY_THRESH)
-
-        # maybe make a border to fix some stuff
-        bordersize = 10
-        mean = 0
-        thresh1 =cv2.copyMakeBorder(thresh1, top=bordersize, bottom=bordersize, left=bordersize, right=bordersize, borderType= cv2.BORDER_CONSTANT, value=[mean,mean,mean] )
-
-
 
         try:
             image, contours, hierarchy = cv2.findContours(thresh1.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -199,8 +207,8 @@ def main():
             print(e)
 
         if len(fingers) != last_num_fingers and last2_num_fingers == last3_num_fingers and len(fingers) == last2_num_fingers:
-            print(len(fingers))
-            winsound.PlaySound("pop.wav", winsound.SND_ASYNC)
+            print("fingers: ", len(fingers))
+            # winsound.PlaySound("pop.wav", winsound.SND_ASYNC)
             last_num_fingers = len(fingers)
 
 
@@ -229,6 +237,9 @@ def main():
 
         # do_gesture(num_fingers)
 
+
+
+
         drawing = cv2.flip(drawing, 1)
         img = cv2.flip(img, 1)
         thresh1 = cv2.flip(thresh1, 1)
@@ -237,13 +248,14 @@ def main():
         final_image[:DETECT_SIZE, width:width+DETECT_SIZE] = drawing
         thresh1 = cv2.resize(thresh1, (DETECT_SIZE, DETECT_SIZE))
         thresh1 = cv2.cvtColor(thresh1,cv2.COLOR_GRAY2RGB)
-        final_image[DETECT_SIZE:DETECT_SIZE*2, width:width+DETECT_SIZE] = thresh1
+        # final_image[DETECT_SIZE:DETECT_SIZE*2, width:width+DETECT_SIZE] = thresh1
 
-        cv2.putText(final_image, str(len(fingers)) + " fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2)
+        cv2.putText(final_image, str(num_fingers) + " fingers", (50,50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255), 2)
+
 
         cv2.imshow('FINAL', final_image)
         # cv2.imshow('drawing', drawing)
-        # cv2.imshow('Thresholded', thresh1)
+        cv2.imshow('Thresholded', thresh1)
 
 
         # Key press

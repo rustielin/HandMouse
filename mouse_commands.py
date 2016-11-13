@@ -57,8 +57,16 @@ class Mouse:
         self.clicked = False
 
     def set_pos(self, x, y):
-        x = width -  x * width//200
-        y = y * width//200
+        x = width + width//10 - x * width//250
+        y = - width/10 + y * width//250
+        if x < 0:
+            x = 0;
+        if y < 0:
+            y = 0;
+        if x >= width:
+            x = width;
+        if y >= width:
+            y = width;
         center = (self.init_x, self.init_y)
         point = (x, y)
         if not self.clicked or distance(point, center) > DIST_THRESH:
