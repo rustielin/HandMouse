@@ -2,7 +2,26 @@ from random import randint
 import cv2
 import numpy
 import test
-from scipy.stats import mode
+def mode(list):
+    d = {}
+    for elm in list:
+        try:
+            d[elm] += 1
+        except(KeyError):
+            d[elm] = 1
+    keys = d.keys()
+    max = d[keys[0]]
+
+    for key in keys[1:]:
+        if d[key] > max:
+            max = d[key]
+
+    max_k = []      
+    for key in keys:
+        if d[key] == max:
+            max_k.append(key),
+    return max_k[0]
+
 t=["rock", 'paper', 'scissors']
 player=False
 while player==False:
